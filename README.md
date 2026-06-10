@@ -6,6 +6,7 @@
 
 - **增量同步** — 基于字符位置追踪，只同步新增内容
 - **全量同步** — `--force-all` 忽略同步状态，重新同步整篇文档
+- **自动定时同步** — `auto_sync.py` 每隔 N 小时自动检测并同步
 - **安全设计** — 默认 dry-run，confirm 确认，secret 不打印
 - **飞书支持** — 普通文档 (docx) 和知识库页面 (wiki)
 - **Markdown 解析** — 拆分为 heading / text / bullet blocks 写入
@@ -68,18 +69,50 @@ python tools/sync_to_feishu.py --confirm
 python tools/sync_to_feishu.py --force-all --confirm
 ```
 
-## 定时任务
+## 自动定时同步
 
-### Windows（任务计划程序）
+使用内置的 `auto_sync.py` 脚本，每隔指定小时自动检测并同步新增内容。
 
-```powershell
-schtasks /create /tn "FeishuSync" /tr "python C:\path\to\sync_to_feishu.py --confirm" /sc daily /st 22:30
+### 配置
+
+在 `.env` 中设置：
+
+```env
+SYNC_INTERVAL_HOURS=2          # 同步间隔（小时），默认 2
+SYNC_SOURCE_FILE=research_note.md  # 同步的源文件名，默认 research_note.md
 ```
 
-### Linux/macOS（crontab）
+### 运行
 
 ```bash
-30 22 * * * cd /path/to/project && python tools/sync_to_feishu.py --confirm
+# 启动持续运行的自动同步（按 Ctrl+C 停止）
+python tools/auto_sync.py
+
+# 只同步一次然后退出
+python tools/auto_sync.py --once
+
+# 命令行覆盖间隔为 1 小时
+python tools/auto_sync.py --interval 1
+```
+
+### 作为后台服务运行
+
+#### Windows（PowerShell 后台）
+
+```powershell
+Start-Process -NoNewWindow python "tools/auto_sync.py"
+```
+
+#### Linux/macOS（nohup）
+
+```bash
+nohup python tools/auto_sync.py &
+```
+
+#### Windows 任务计划程序（开机自启）
+
+```powershell
+schtasks /create /tn "FeishuAutoSync" /tr "python C:\path\to\tools\auto_sync.py" /sc onlogon
 ```
 
 ## 项目结构
@@ -94,7 +127,8 @@ work/
 ├── tools/
 │   ├── __init__.py
 │   ├── feishu_client.py      # 飞书 API 客户端
-│   └── sync_to_feishu.py     # 同步 CLI 工具
+│   ├── sync_to_feishu.py     # 手动同步 CLI 工具
+│   └── auto_sync.py          # 自动定时同步脚本
 ├── logs/                     # 同步日志
 └── archive/                  # 归档目录
 ```
